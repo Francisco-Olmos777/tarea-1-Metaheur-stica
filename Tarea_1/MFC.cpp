@@ -22,6 +22,7 @@ vector<vector<int>> tau;  // Matriz de separacion entre aviones i y j
 
 // Estado de la solucion
 double mejor_costo_global = 999999999;
+long long nodos_explorados = 0;
 vector<int> mejores_tiempos;
 vector<int> mejores_pistas;
 
@@ -69,6 +70,9 @@ bool propagarMFC(int indice_actual, int pista_asignada, int tiempo_asignado, vec
 // LA RECURSION EXACTA (Backtracking + Minimal Forward Checking)
 void solveMFC(int indice_actual, vector<vector<int>>& E_dinamico_pistas, vector<int>& tiempos_asignados, vector<int>& pistas_asignadas, double costo_acumulado) {
     
+    //Nodos explorados 
+    nodos_explorados++;
+
     //tiempo limite
     if (tiempo_agotado) return; 
     auto tiempo_actual = high_resolution_clock::now();
@@ -123,7 +127,6 @@ void solveMFC(int indice_actual, vector<vector<int>>& E_dinamico_pistas, vector<
             if (es_valido) {
                 double costo_paso = calcularCosto(indice_actual, t);
                 tiempos_asignados[indice_actual] = t;
-                
                 solveMFC(indice_actual + 1, E_dinamico_pistas, tiempos_asignados, pistas_asignadas, costo_acumulado + costo_paso);
             }
 
@@ -137,7 +140,7 @@ void solveMFC(int indice_actual, vector<vector<int>>& E_dinamico_pistas, vector<
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 
-void mostrarSolucion(double costo_final, const vector<int>& tiempos_finales, const vector<int>& pistas_finales, double tiempo_ejecucion) {
+void mostrarSolucion(double costo_final, const vector<int>& tiempos_finales, const vector<int>& pistas_finales, double tiempo_ejecucion, long long nodos_explorados) {
     cout << "\n==================================================\n";
     cout << "              RESULTADOS DE LA ASIGNACION         \n";
     cout << "==================================================\n";
@@ -147,17 +150,30 @@ void mostrarSolucion(double costo_final, const vector<int>& tiempos_finales, con
         cout << "No se encontro ninguna solucion factible en el tiempo dado." << endl;
     } else {
         cout << "Tiempo de ejecucion : " << tiempo_ejecucion << " segundos" << endl;
+        cout << "Nodos explorados    : " << nodos_explorados << " nodos" << endl;
         cout << "Costo Total Optimo  : $" << costo_final << endl;
         cout << "--------------------------------------------------\n";
         cout << "Detalle por Avion:\n";
         
+        vector<int> conteo_pistas(num_pistas + 1, 0);
+        
+        cout << "Detalle por Avion:\n";
         for (size_t i = 0; i < tiempos_finales.size(); i++) {
             cout << "  Avion " << (aviones[i].id + 1) 
                  << "\t-> Pista: " << pistas_finales[i] 
                  << "\t| Minuto de aterrizaje: " << tiempos_finales[i] << endl;
+            
+            if (pistas_finales[i] > 0) conteo_pistas[pistas_finales[i]]++;
+                
+        }
+        cout << "--------------------------------------------------\n";
+        cout << "Resumen de ocupacion por Pista:\n";
+        for (int p = 1; p <= num_pistas; p++) {
+            cout << "  Pista " << p << ": " << conteo_pistas[p] << " aviones asignados." << endl;
         }
     }
     cout << "==================================================\n";
+
 }
 
 bool inicializarEntorno(const string& nombre_archivo, vector<vector<int>>& E_dinamico_pistas, vector<int>& tiempos_asignados, vector<int>& pistas_asignadas) {
@@ -210,7 +226,7 @@ int main() {
     vector<int> pistas_asignadas;
 
     // Inicializar todo (Archivo, Heurística y Matrices)
-    if (!inicializarEntorno("case1.txt", E_dinamico_pistas, tiempos_asignados, pistas_asignadas)) {
+    if (!inicializarEntorno("case3.txt", E_dinamico_pistas, tiempos_asignados, pistas_asignadas)) {
         return 1; // Falla si el archivo no existe
     }
 
@@ -226,28 +242,7 @@ int main() {
     duration<double> tiempo_total = duration_cast<duration<double>>(tiempo_fin - tiempo_inicio);
 
     //Mostrar resultados finales
-    mostrarSolucion(mejor_costo_global, mejores_tiempos, mejores_pistas, tiempo_total.count());
+    mostrarSolucion(mejor_costo_global, mejores_tiempos, mejores_pistas, tiempo_total.count(), nodos_explorados);
 
     return 0;
 }
-
-
-
-/*grafico de :
-
-Gráfico de Explosión Combinatoria (Tiempo vs. N)
-    Eje X: Número de aviones (Casos: 15, 20, 44, 100).
-    Eje Y: Tiempo de ejecución en segundos.
-
-Histograma de Uso de Pistas (El "Efecto Goloso")
-
-    Eje X: Pistas (Pista 1, Pista 2, Pista 3).
-    Eje Y: Cantidad de aviones asignados a esa pista.
-
-Tabla Resumen de Ejecución
-    Instancia (Case 1, 2, 3, 4)
-    Tamaño ($N$) (15, 20, 44, 100)
-    Mejor Costo Encontrado * Tiempo de Ejecución (X seg / "Time Limit")
-    Estado de la Solución (Óptimo Demostrado / Subóptimo por Time Limit)
-
-*/
